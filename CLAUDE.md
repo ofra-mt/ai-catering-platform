@@ -24,6 +24,17 @@ uv run pytest tests/test_health.py::test_health_ok   # single test
 
 CI (`.github/workflows/ci.yml`) runs exactly these lint/format/test steps on pushes and PRs to `dev` and `main`. The frontend has no build step, linter or tests: open the pages through the running server.
 
+## Verify after every task
+
+Before reporting any change as done, run all of these and report the results honestly, including failures:
+
+1. **Tests for the change:** add or update a pytest for new backend logic, then run it on its own (`uv run pytest tests/<file>.py::<test>`).
+2. **Regression:** run the full CI set from `backend/`: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`. Everything that passed before the change must still pass.
+3. **End to end:** start the server and go through what the change touches in a browser: `/health`, the landing page `/`, and the customer flow `/customer/` (event → menu → summary → status, plus the chat panel). Also check `/admin/` if it was touched. Check the browser console for errors.
+4. **Edge cases:** empty, very long, invalid or unexpected input; missing data (e.g. `allergens: null`); narrow (phone) and wide screens; RTL layout; `prefers-reduced-motion`.
+
+The frontend has no automated tests, so steps 3–4 are the only regression check for it.
+
 ## Architecture
 
 **One FastAPI process serves both the API and the frontend.** `backend/app/main.py` defines the API routes and then mounts `frontend/` as static files at `/`. That mount must stay last so API routes take precedence. Everything is same-origin, so there is no CORS setup.
