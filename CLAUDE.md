@@ -26,12 +26,19 @@ CI (`.github/workflows/ci.yml`) runs exactly these lint/format/test steps on pus
 
 ## Verify after every task
 
-Before reporting any change as done, run all of these and report the results honestly, including failures:
+Before reporting any change as done, run all of these steps and report the results honestly, including failures:
 
 1. **Tests for the change:** add or update a pytest for new backend logic, then run it on its own (`uv run pytest tests/<file>.py::<test>`).
 2. **Regression:** run the full CI set from `backend/`: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`. Everything that passed before the change must still pass.
 3. **End to end:** start the server and go through what the change touches in a browser: `/health`, the landing page `/`, and the customer flow `/customer/` (event → menu → summary → status, plus the chat panel). Also check `/admin/` if it was touched. Check the browser console for errors.
 4. **Edge cases:** empty, very long, invalid or unexpected input; missing data (e.g. `allergens: null`); narrow (phone) and wide screens; RTL layout; `prefers-reduced-motion`.
+5. **Security review** of the diff (`/security-review` or a manual pass). `ruff`'s `S` (bandit) rules cover only part of it. Check at least:
+   - **XSS:** no `innerHTML`/`insertAdjacentHTML`/`outerHTML` with user, API or LLM text. Use `h()`.
+   - **Injection:** parameterized SQL only, never string-built queries. LLM output is treated as untrusted input.
+   - **Trust boundary:** request bodies and AI-tool arguments are validated with Pydantic, and prices and totals are recomputed in `services/`, never taken from the client.
+   - **Authorization:** owner-only endpoints are protected, and proposal execution stays customer-only (ADR-0003).
+   - **Secrets:** nothing real in code, `.env.example`, logs or commits, and `SUPABASE_SERVICE_ROLE_KEY` is never sent to the browser. Logs leave out addresses and phone numbers.
+   - **Links:** external links use `rel="noopener noreferrer"`, and no URL is built from unvalidated input.
 
 The frontend has no automated tests, so steps 3–4 are the only regression check for it.
 
