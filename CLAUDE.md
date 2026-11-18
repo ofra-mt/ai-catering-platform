@@ -48,6 +48,10 @@ CI (`.github/workflows/ci.yml`) runs `uv sync --frozen`, ruff check, ruff format
 
 Supabase (Postgres, Storage, Auth) is the planned data layer (ADR-0002). On `main`, DB settings in `core/config.py` are optional and `database/migrations/` is empty. The `feat/supabase-foundation` branch adds `supabase/migrations/` (schema, auth, RLS, storage), `supabase/seed.sql`, a login page, a Supabase JS client and RLS tests. Check which branch you are on before assuming the DB exists. The service-role key stays server-side.
 
+## Leads and scoring
+
+The landing-page form posts to `POST /api/leads`. The backend validates, scores and inserts with the service role key. The score comes from `app/ml/lead_model.json`, a logistic regression read by `services/lead_scoring.py` in pure Python (JSON only, never pickle). The shipped model is trained on **synthetic** data: run `scripts/make_synthetic_leads.py` then `scripts/train_lead_model.py` (scikit-learn and numpy are dev-only). Retrain on real closed leads once there are at least 50. Never log lead phone or email. See ADR-0005.
+
 ## After every completed task
 
 Run these in order and stop at the first failure (fix it, then restart the sequence):
