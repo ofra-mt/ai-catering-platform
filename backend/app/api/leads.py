@@ -24,6 +24,9 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
 
 def _rate_limited(ip: str) -> bool:
     now = time.monotonic()
+    if len(_hits) > 10_000:  # drop stale IPs so many distinct clients cannot grow memory forever
+        for stale in [k for k, v in _hits.items() if not v or now - v[-1] >= RATE_WINDOW_SECONDS]:
+            del _hits[stale]
     recent = [t for t in _hits[ip] if now - t < RATE_WINDOW_SECONDS]
     limited = len(recent) >= RATE_LIMIT
     if not limited:
