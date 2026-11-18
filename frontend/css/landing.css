@@ -165,3 +165,17 @@ mark.todo { background: var(--color-highlight); color: var(--color-text); paddin
 .demo-total strong { font-size: var(--text-xl); }
 .done-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); position: relative; }
 .link-btn { background: none; border: 0; padding: 0; min-height: 32px; color: var(--color-accent); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* ---------- lead form ---------- */
+.lead-intro { margin-block-end: var(--space-6); max-width: 60ch; }
+.stack-lg { display: grid; gap: var(--space-6); align-content: start; }
+.lead-form { max-width: 720px; }
+.lead-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+.lead-trap { position: absolute; inset-inline-start: -9999px; inline-size: 1px; block-size: 1px; overflow: hidden; }
+.lead-consent { display: flex; align-items: center; gap: var(--space-3); min-block-size: 44px; cursor: pointer; }
+.lead-consent input { inline-size: 24px; block-size: 24px; flex: none; }
+.lead-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.lead-status { font-weight: 600; }
+.lead-ok { color: var(--color-success); font-size: var(--text-lg); }
+.lead-fail { color: var(--color-danger); }
+@media (min-width: 640px) { .lead-grid { grid-template-columns: 1fr 1fr; } }

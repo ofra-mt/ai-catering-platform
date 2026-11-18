@@ -14,6 +14,10 @@ const STATUS = {
   rejected: ["badge-danger", "נדחה"],
 };
 
+const LEAD_STATUS = { new: "חדש", contacted: "נוצר קשר", quoted: "נשלחה הצעה", won: "נסגר", lost: "אבד" };
+// Score bands: hot at 0.6 and above, warm at 0.35 and above. Text label always shown, not colour alone.
+const leadBand = (score) => (score >= 0.6 ? ["badge-green", "חם"] : score >= 0.35 ? ["badge-warning", "פושר"] : ["badge-pareve", "קר"]);
+
 const head = h("header", { class: "admin-head" },
   h("h1", { class: "auth-title", text: "ממשק העסק" }),
   h("button", { class: "btn btn-ghost", type: "button", onclick: signOut }, "יציאה"));
@@ -21,6 +25,7 @@ const head = h("header", { class: "admin-head" },
 if (!isAdmin(session)) {
   fill(root, head, h("p", { role: "alert", text: "לחשבון הזה אין הרשאת ניהול." }));
 } else {
+  const leadsBox = h("ul", { class: "admin-list" });
   const ordersBox = h("ul", { class: "admin-list" });
   const dishesBox = h("ul", { class: "admin-list" });
   const message = h("p", { class: "error", role: "alert", hidden: true });
@@ -31,6 +36,10 @@ if (!isAdmin(session)) {
   };
 
   fill(root, head, message,
+    h("section", { class: "stack", "aria-labelledby": "leads-title" },
+      h("h2", { id: "leads-title", text: "לידים" }),
+      h("p", { class: "muted small", text: "הציון הוא הערכה ראשונית (נתונים סינתטיים): הסיכוי שהליד יהפוך להזמנה." }),
+      leadsBox),
     h("section", { class: "stack", "aria-labelledby": "orders-title" },
       h("h2", { id: "orders-title", text: "בקשות להצעת מחיר" }), ordersBox),
     h("section", { class: "stack", "aria-labelledby": "dishes-title" },
@@ -58,6 +67,37 @@ if (!isAdmin(session)) {
           h("button", { class: "btn btn-primary", type: "button", onclick: () => decide(o.id, "approved", note.value) }, "אישור"),
           h("button", { class: "btn btn-danger", type: "button", onclick: () => decide(o.id, "rejected", note.value) }, "דחייה"))]
         : null);
+  }
+
+  async function setLeadStatus(id, status) {
+    showError("");
+    const { error } = await sb.from("leads").update({ status }).eq("id", id);
+    if (error) showError("עדכון הסטטוס נכשל. נסו שוב.");
+  }
+
+  function leadCard(l) {
+    const pct = Math.round((l.score ?? 0) * 100);
+    const [badge, band] = leadBand(l.score ?? 0);
+    const selectId = `lead-status-${l.id}`;
+    return h("li", { class: "panel admin-order" },
+      h("div", { class: "admin-order-head" },
+        h("strong", { text: `${l.full_name}, ${l.event_type}` }),
+        h("span", { class: `badge ${badge}`, text: `${band} ${pct}%` })),
+      h("p", { class: "muted", text: `${fmtDate(l.event_date)}, ${l.guests} אורחים` }),
+      h("p", { class: "muted small", dir: "auto", text: [l.phone, l.email].filter(Boolean).join(" | ") }),
+      h("p", { class: "small", text: `סיבות: ${(l.score_reasons ?? []).map((r) => `${r.direction} ${r.label}`).join(", ")}` }),
+      h("div", { class: "field" },
+        h("label", { for: selectId, text: "סטטוס" }),
+        h("select", { id: selectId, class: "input", onchange: (e) => setLeadStatus(l.id, e.target.value) },
+          Object.entries(LEAD_STATUS).map(([value, text]) => h("option", { value, text, selected: l.status === value })))));
+  }
+
+  async function loadLeads() {
+    const { data, error } = await sb.from("leads")
+      .select("id,full_name,phone,email,event_type,event_date,guests,status,score,score_reasons")
+      .order("score", { ascending: false });
+    if (error) return showError("לא הצלחנו לטעון את הלידים.");
+    fill(leadsBox, data.length ? data.map(leadCard) : h("li", { class: "muted", text: "אין עדיין לידים." }));
   }
 
   async function updateDish(id, patch) {
@@ -112,7 +152,7 @@ if (!isAdmin(session)) {
     fill(dishesBox, data.map(dishRow));
   }
 
-  await Promise.all([loadOrders(), loadDishes()]);
+  await Promise.all([loadLeads(), loadOrders(), loadDishes()]);
 
   sb.channel("admin")
     .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
