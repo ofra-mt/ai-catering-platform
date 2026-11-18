@@ -201,5 +201,19 @@ begin
           v_total, v_total + v_price * 2);
 end $$;
 
+-- Synthetic leads (invented people). Scores are illustrative, not produced by the model.
+insert into public.leads (full_name, phone, email, event_type, event_date, guests, budget_band, source, message,
+                          consent, status, score, score_model_version, score_reasons)
+values
+  ('נועה לוי', '0501234567', 'noa@example.com', 'בר או בת מצווה', current_date + 45, 120, 'high', 'referral',
+   'מחפשים קייטרינג לבר מצווה בגן אירועים.', true, 'new', 0.8200, 'demo',
+   '[{"label": "מספר אורחים", "direction": "+"}, {"label": "תקציב", "direction": "+"}, {"label": "הגיעו בהמלצה", "direction": "+"}]'),
+  ('דוד כהן', '0521112233', null, 'ארוחת שבת', current_date + 10, 8, 'low', 'google_cpc',
+   null, true, 'new', 0.1200, 'demo',
+   '[{"label": "מעט אורחים", "direction": "-"}, {"label": "תקציב", "direction": "-"}, {"label": "קמפיין ממומן", "direction": "-"}]'),
+  ('מיכל ברק', '035551234', 'michal@example.com', 'יום נישואין', current_date + 90, 30, 'mid', null,
+   'ערב רומנטי לשלושים איש.', true, 'contacted', 0.4300, 'demo',
+   '[{"label": "יש אימייל", "direction": "+"}, {"label": "מספר אורחים", "direction": "+"}, {"label": "זמן עד האירוע", "direction": "-"}]');
+
 -- The account trigger cannot see app_metadata yet when the Admin API inserts a user, so remove the owner's row.
 delete from public.customers where email = 'owner@example.com';
