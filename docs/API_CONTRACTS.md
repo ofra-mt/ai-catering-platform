@@ -1,6 +1,6 @@
 # API Contracts (preliminary)
 
-Status: **Draft v0.1**. Only `GET /health` is implemented (Phase 1). Everything else is a design target and may change.
+Status: **Draft v0.1**. `GET /health`, `GET /api/public-config` and `POST /api/leads` are implemented. Everything else is a design target and may change.
 
 Base: same origin as the frontend. JSON only. All bodies validated with Pydantic.
 
@@ -17,6 +17,16 @@ Common codes: `validation_error` (422), `not_found` (404), `forbidden` (403), `u
 | Method | Path | Response | Phase |
 |---|---|---|---|
 | GET | `/health` | `{"status":"ok","env":"development"}` | **1 (implemented)** |
+
+## Leads (public write)
+
+| Method | Path | Response |
+|---|---|---|
+| POST | `/api/leads` | `201 {"id", "status": "new"}` |
+
+Body: `full_name`, `phone`, `email?`, `event_type`, `event_date` (future), `guests` (1-5000), `budget_band` (`low|mid|high|premium`), `source?`, `message?` (max 1000), `consent` (must be `true`), `website` (honeypot, must be empty). The backend computes the score (ADR-0005); a client-sent score is ignored.
+
+Errors use the standard shape: `422 validation_error` (details list field names only, never submitted values), `429 rate_limited` (5 per 10 minutes per IP, in memory), `502 storage_error`, `503 service_unavailable` (Supabase not configured).
 
 ## Catalog (public read)
 

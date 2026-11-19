@@ -1,13 +1,35 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api import leads
 from app.core.config import get_settings
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 app = FastAPI(title="AI Catering Platform")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Error shape from docs/API_CONTRACTS.md. Field names only: never echo submitted values."""
+    details = [
+        {"field": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in exc.errors()
+    ]
+    body = {
+        "error": {
+            "code": "validation_error",
+            "message": "הנתונים שנשלחו אינם תקינים.",
+            "details": details,
+        }
+    }
+    return JSONResponse(status_code=422, content=body)
+
+
+app.include_router(leads.router)
 
 
 @app.get("/health")

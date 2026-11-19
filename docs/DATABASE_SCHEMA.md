@@ -16,6 +16,7 @@ Conventions **[RECOMMENDATION]**: `uuid` PKs (`gen_random_uuid()`), `timestamptz
 | `order_status` | `draft`, `pending_approval`, `approved`, `rejected` | Spec §10 (preliminary) |
 | `proposal_status` | `pending`, `approved`, `rejected`, `expired`, `failed` | AI design |
 | `allergen_status` | `contains`, `free`, `unknown` | Decision 9 — unknown ≠ free |
+| `lead_status` | `new`, `contacted`, `quoted`, `won`, `lost` | ADR-0005 |
 
 ## Tables
 
@@ -148,3 +149,28 @@ Proposals may only execute while order is `draft`.
 ## Business rules storage
 
 Quantity rules (Decision 5) will live in a `quantity_rules` table once formulas are known **[OPEN #3]**. Shape intentionally not designed yet.
+
+## Leads (migration `20261118090000_leads.sql`)
+
+### leads
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| created_at | timestamptz | |
+| full_name | text not null | 2-80 chars |
+| phone | text not null | Israeli number, digits only (`^0(5[0-9]\|[2-489])[0-9]{7}$`) |
+| email | text null | max 254, simple pattern |
+| event_type | text not null | Same fixed list as the customer app |
+| event_date | date not null | Future date is validated by Pydantic, not by the DB |
+| guests | int not null | 1-5000 |
+| budget_band | text not null | `low`, `mid`, `high`, `premium` |
+| source | text null | UTM source, max 100 |
+| message | text null | max 1000 |
+| consent | boolean not null | `CHECK (consent)`: must be true |
+| status | lead_status not null default `new` | Admin changes it |
+| score | numeric(5,4) null | 0-1, probability of winning. Computed by the backend |
+| score_model_version | text null | Version in `app/ml/lead_model.json` |
+| score_reasons | jsonb null | Top 3 reasons: `[{label, direction}]` |
+| customer_id | uuid FK null | Links to `customers` after the lead orders. `on delete set null` |
+
+RLS: no `anon` access. `authenticated` has `select` and `update (status, customer_id)`, and the policies allow only `private.is_admin()`. There is no insert policy: only the backend inserts, with the service role key.
